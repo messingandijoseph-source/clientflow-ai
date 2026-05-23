@@ -139,4 +139,4 @@ This project is currently an MVP prototype built for academic and startup demons
 
 # Author
 
-Developed by Joseph Messingandi.
+Developed by MESSI NGANDI JOSEPH.
