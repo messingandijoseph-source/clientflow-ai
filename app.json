@@ -1,29 +1,37 @@
 {
   "expo": {
-    "name": "clientflow-ai-v3",
+    "name": "ClientFlow AI",
     "slug": "clientflow-ai-v3",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0F172A"
     },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#0F172A"
       },
-      "edgeToEdgeEnabled": true
+      "package": "com.clientflow.ai"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/icon.png"
+    },
+    "scheme": "clientflowai",
+    "extra": {
+      "eas": {
+        "projectId": "6c652075-1831-45ff-aad5-a3436f3d5bf8"
+      }
     }
   }
 }

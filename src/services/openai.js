@@ -1,47 +1,76 @@
-export const generateAIContent = async (businessType, contentType) => {
-  await new Promise((resolve) => setTimeout(resolve, 1500));
+import axios from "axios";
 
-  const business = businessType || "business";
+const OPENAI_API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY;
 
-  const templates = {
-    sales: `🔥 Special offer for you!
+export const generateAIContent = async (
+  businessType,
+  contentType,
+  language = "en"
+) => {
+  try {
+    const prompts = {
+      sales:
+        language === "fr"
+          ? `Écris un message WhatsApp professionnel et convaincant pour promouvoir un business de type ${businessType}. Le message doit être humain, court, engageant et adapté aux clients africains.`
+          : `Write a professional and persuasive WhatsApp sales message for a ${businessType} business. Make it human, short, engaging, and adapted to African customers.`,
 
-Looking for trusted ${business} services? We’ve got exactly what you need.
+      followup:
+        language === "fr"
+          ? `Écris un message de relance professionnel pour un client intéressé par un business de ${businessType}.`
+          : `Write a professional follow-up message for a customer interested in a ${businessType} business.`,
 
-✅ Quality service
-✅ Affordable prices
-✅ Fast response
-✅ Customer satisfaction guaranteed
+      promo:
+        language === "fr"
+          ? `Crée une offre promotionnelle puissante pour un business de ${businessType}.`
+          : `Create a powerful promotional offer for a ${businessType} business.`,
 
-📲 Message us now on WhatsApp and place your order today!`,
+      caption:
+        language === "fr"
+          ? `Écris une légende Facebook/Instagram engageante pour un business de ${businessType}.`
+          : `Write an engaging Facebook/Instagram caption for a ${businessType} business.`,
+    };
 
-    followup: `Hello 👋
+    const prompt = prompts[contentType] || prompts.sales;
 
-I hope you're doing well. I just wanted to follow up concerning our ${business} offer.
+    const response = await axios.post(
+      "https://api.openai.com/v1/chat/completions",
+      {
+        model: "gpt-4.1-mini",
+        messages: [
+          {
+            role: "system",
+            content:
+              language === "fr"
+                ? "Tu es un assistant IA expert en marketing et vente pour les petites entreprises africaines."
+                : "You are an AI marketing and sales assistant specialized in helping African small businesses.",
+          },
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        temperature: 0.8,
+        max_tokens: 300,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
 
-We still have available slots/products, and I’d be happy to help you choose the best option.
+    return response.data.choices[0].message.content.trim();
+  } catch (error) {
+    const message =
+      error?.response?.data?.error?.message ||
+      error?.message ||
+      "Unknown OpenAI error";
 
-📲 Let me know if you’d like more details today.`,
+    console.log("OPENAI ERROR:", message);
 
-    promo: `🎉 Limited-time promo!
-
-Get the best ${business} deals today at a special price.
-
-🔥 Offer valid for a short time only
-✅ Quality guaranteed
-✅ Fast service
-✅ Easy payment options
-
-📲 Contact us now before the promo ends!`,
-
-    caption: `Your next favorite ${business} solution is here 🚀
-
-We help customers enjoy quality, affordability, and trusted service every day.
-
-Don’t wait until later — send us a message today and let’s serve you better.
-
-#BusinessAfrica #SmallBusiness #ClientFlowAI #WhatsAppBusiness`,
-  };
-
-  return templates[contentType] || templates.sales;
+    return language === "fr"
+      ? `Erreur OpenAI: ${message}`
+      : `OpenAI Error: ${message}`;
+  }
 };

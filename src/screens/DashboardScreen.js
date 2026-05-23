@@ -1,74 +1,194 @@
-import React from "react";
-import { View, Text, StyleSheet, ScrollView } from "react-native";
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+} from "react-native";
+
 import { COLORS, SIZES, SHADOWS } from "../constants/theme";
 import { BRAND } from "../constants/brand";
-import { initialLeads } from "../data/mockData";
+import { useLanguage } from "../contexts/LanguageContext";
+import { useAuth } from "../contexts/AuthContext";
+import { getLeads, getUserProfile } from "../services/database";
 
 export default function DashboardScreen() {
-  const totalLeads = initialLeads.length;
-  const hotLeads = initialLeads.filter((lead) => lead.status === "Hot Lead").length;
-  const convertedLeads = initialLeads.filter(
-    (lead) => lead.status === "Converted"
-  ).length;
-  const followUps = initialLeads.filter(
-    (lead) => lead.status === "Contacted" || lead.status === "Hot Lead"
+  const { language, toggleLanguage, t } = useLanguage();
+  const { user } = useAuth();
+
+  const [leads, setLeads] = useState([]);
+  const [profileName, setProfileName] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  const loadDashboardData = async () => {
+    if (!user) return;
+
+    setLoading(true);
+
+    const { data: profile } = await getUserProfile(user.id);
+
+    if (profile?.full_name) {
+      setProfileName(profile.full_name);
+    }
+
+    const { data: leadsData, error } = await getLeads(user.id);
+
+    if (!error) {
+      setLeads(leadsData || []);
+    }
+
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  const totalLeads = leads.length;
+
+  const newLeads = leads.filter((lead) => lead.status === "New").length;
+
+  const contactedLeads = leads.filter(
+    (lead) => lead.status === "Contacted"
   ).length;
 
-  const conversionRate = Math.round((convertedLeads / totalLeads) * 100);
+  const negotiatingLeads = leads.filter(
+    (lead) => lead.status === "Negotiating"
+  ).length;
+
+  const convertedLeads = leads.filter(
+    (lead) => lead.status === "Converted"
+  ).length;
+
+  const lostLeads = leads.filter((lead) => lead.status === "Lost").length;
+
+  const activeOpportunities = newLeads + contactedLeads + negotiatingLeads;
+
+  const conversionRate =
+    totalLeads === 0 ? 0 : Math.round((convertedLeads / totalLeads) * 100);
+
+  const firstName = profileName ? profileName.split(" ")[0] : "";
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <Text style={styles.greeting}>Welcome back 👋</Text>
-      <Text style={styles.title}>{BRAND.name}</Text>
-      <Text style={styles.subtitle}>{BRAND.slogan}</Text>
+      <View style={styles.headerRow}>
+        <View style={styles.headerTextBox}>
+          <Text style={styles.greeting}>
+            {firstName
+              ? language === "en"
+                ? `Welcome back, ${firstName} 👋`
+                : `Bon retour, ${firstName} 👋`
+              : t.welcomeBack}
+          </Text>
 
-      <View style={styles.statsGrid}>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{totalLeads}</Text>
-          <Text style={styles.statLabel}>Total Leads</Text>
+          <Text style={styles.title}>{BRAND.name}</Text>
         </View>
 
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{hotLeads}</Text>
-          <Text style={styles.statLabel}>Hot Leads</Text>
-        </View>
-
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{convertedLeads}</Text>
-          <Text style={styles.statLabel}>Converted</Text>
-        </View>
-
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{conversionRate}%</Text>
-          <Text style={styles.statLabel}>Conversion</Text>
-        </View>
+        <TouchableOpacity style={styles.langButton} onPress={toggleLanguage}>
+          <Text style={styles.langText}>{language === "en" ? "FR" : "EN"}</Text>
+        </TouchableOpacity>
       </View>
 
-      <View style={styles.insightCard}>
-        <Text style={styles.insightLabel}>AI Business Insight</Text>
-        <Text style={styles.insightTitle}>Follow up your warm leads today</Text>
-        <Text style={styles.insightText}>
-          You have {followUps} leads that need attention. Sending a short,
-          personal WhatsApp message today can increase your chances of closing
-          more clients.
-        </Text>
-      </View>
+      <Text style={styles.subtitle}>{t.slogan}</Text>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Best Channel</Text>
-        <Text style={styles.cardText}>
-          WhatsApp is your strongest conversion channel. Focus on short offers,
-          testimonials, urgency, and direct calls to action.
-        </Text>
-      </View>
+      {loading ? (
+        <ActivityIndicator color={COLORS.primary} size="large" />
+      ) : (
+        <>
+          <View style={styles.statsGrid}>
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>{totalLeads}</Text>
+              <Text style={styles.statLabel}>
+                {language === "en" ? "Total Leads" : "Total prospects"}
+              </Text>
+            </View>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Suggested Action</Text>
-        <Text style={styles.cardText}>
-          Generate a follow-up message for your hot leads and send it before the
-          end of the day.
-        </Text>
-      </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>{activeOpportunities}</Text>
+              <Text style={styles.statLabel}>
+                {language === "en" ? "Active Deals" : "Opportunités"}
+              </Text>
+            </View>
+
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>{convertedLeads}</Text>
+              <Text style={styles.statLabel}>{t.converted}</Text>
+            </View>
+
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>{conversionRate}%</Text>
+              <Text style={styles.statLabel}>{t.conversion}</Text>
+            </View>
+          </View>
+
+          <View style={styles.pipelineCard}>
+            <Text style={styles.pipelineTitle}>
+              {language === "en" ? "Sales Pipeline" : "Pipeline de vente"}
+            </Text>
+
+            <View style={styles.pipelineRow}>
+              <Text style={styles.pipelineLabel}>
+                {language === "en" ? "New" : "Nouveau"}
+              </Text>
+              <Text style={styles.pipelineValue}>{newLeads}</Text>
+            </View>
+
+            <View style={styles.pipelineRow}>
+              <Text style={styles.pipelineLabel}>
+                {language === "en" ? "Contacted" : "Contacté"}
+              </Text>
+              <Text style={styles.pipelineValue}>{contactedLeads}</Text>
+            </View>
+
+            <View style={styles.pipelineRow}>
+              <Text style={styles.pipelineLabel}>
+                {language === "en" ? "Negotiating" : "Négociation"}
+              </Text>
+              <Text style={styles.pipelineValue}>{negotiatingLeads}</Text>
+            </View>
+
+            <View style={styles.pipelineRow}>
+              <Text style={styles.pipelineLabel}>
+                {language === "en" ? "Converted" : "Converti"}
+              </Text>
+              <Text style={styles.pipelineValue}>{convertedLeads}</Text>
+            </View>
+
+            <View style={styles.pipelineRow}>
+              <Text style={styles.pipelineLabel}>
+                {language === "en" ? "Lost" : "Perdu"}
+              </Text>
+              <Text style={styles.pipelineValue}>{lostLeads}</Text>
+            </View>
+          </View>
+
+          <View style={styles.insightCard}>
+            <Text style={styles.insightLabel}>{t.aiInsight}</Text>
+            <Text style={styles.insightTitle}>
+              {language === "en"
+                ? "Focus on active opportunities"
+                : "Concentre-toi sur les opportunités actives"}
+            </Text>
+            <Text style={styles.insightText}>
+              {language === "en"
+                ? `You currently have ${activeOpportunities} active opportunities. Follow up with contacted and negotiating leads to improve your conversion rate.`
+                : `Tu as actuellement ${activeOpportunities} opportunités actives. Relance les prospects contactés et en négociation pour améliorer ton taux de conversion.`}
+            </Text>
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>{t.bestChannel}</Text>
+            <Text style={styles.cardText}>{t.bestChannelText}</Text>
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>{t.suggestedAction}</Text>
+            <Text style={styles.cardText}>{t.suggestedActionText}</Text>
+          </View>
+        </>
+      )}
     </ScrollView>
   );
 }
@@ -80,8 +200,19 @@ const styles = StyleSheet.create({
     padding: SIZES.padding,
   },
 
-  greeting: {
+  headerRow: {
     marginTop: 36,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  headerTextBox: {
+    flex: 1,
+    paddingRight: 10,
+  },
+
+  greeting: {
     color: COLORS.muted,
     fontSize: 16,
   },
@@ -93,10 +224,22 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
 
+  langButton: {
+    backgroundColor: COLORS.dark,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 14,
+  },
+
+  langText: {
+    color: "#FFFFFF",
+    fontWeight: "900",
+  },
+
   subtitle: {
     color: COLORS.muted,
     fontSize: 15,
-    marginTop: 6,
+    marginTop: 10,
     marginBottom: 24,
   },
 
@@ -125,6 +268,39 @@ const styles = StyleSheet.create({
     color: COLORS.muted,
     marginTop: 4,
     fontWeight: "700",
+  },
+
+  pipelineCard: {
+    backgroundColor: COLORS.card,
+    padding: 20,
+    borderRadius: SIZES.radius,
+    marginBottom: 18,
+    ...SHADOWS.card,
+  },
+
+  pipelineTitle: {
+    fontSize: 20,
+    fontWeight: "900",
+    color: COLORS.dark,
+    marginBottom: 14,
+  },
+
+  pipelineRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 9,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+
+  pipelineLabel: {
+    color: COLORS.muted,
+    fontWeight: "800",
+  },
+
+  pipelineValue: {
+    color: COLORS.dark,
+    fontWeight: "900",
   },
 
   insightCard: {
